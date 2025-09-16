@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -41,6 +42,9 @@ namespace Message_Client
             txtServerAddress.TextChanged += ValidateConnectionInputs;
             txtServerPort.TextChanged += ValidateConnectionInputs;
             txtUsername.TextChanged += ValidateConnectionInputs;
+            
+            // Khởi tạo popup biểu cảm
+            InitializeEmojiPicker();
             
             // Disable nút kết nối ban đầu
             btnConnect.IsEnabled = false;
@@ -100,6 +104,7 @@ namespace Message_Client
                     btnDisconnect.IsEnabled = true;
                     txtMessage.IsEnabled = true;
                     btnSend.IsEnabled = true;
+                    btnEmoji.IsEnabled = true;
                     
                     // Disable connection settings
                     txtServerAddress.IsEnabled = false;
@@ -282,6 +287,7 @@ namespace Message_Client
             btnDisconnect.IsEnabled = false;
             txtMessage.IsEnabled = false;
             btnSend.IsEnabled = false;
+            btnEmoji.IsEnabled = false;
             
             // Enable connection settings
             txtServerAddress.IsEnabled = true;
@@ -389,6 +395,77 @@ namespace Message_Client
             // Tất cả đều hợp lệ
             btnConnect.IsEnabled = true;
             lblStatus.Text = $"Sẵn sàng kết nối tới {serverAddress}:{port} với tên '{username}'";
+        }
+
+        private void InitializeEmojiPicker()
+        {
+            // Danh sách các biểu cảm phổ biến
+            string[] emojis = {
+                "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣",
+                "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰",
+                "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜",
+                "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏",
+                "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣",
+                "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠",
+                "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨",
+                "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥",
+                "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧",
+                "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐",
+                "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑",
+                "🤠", "😈", "👿", "👹", "👺", "🤡", "💩", "👻",
+                "💀", "☠️", "👽", "👾", "🤖", "🎃", "😺", "😸",
+                "😹", "😻", "😼", "😽", "🙀", "😿", "😾"
+            };
+
+            // Tạo các nút biểu cảm
+            foreach (string emoji in emojis)
+            {
+                var button = new Button
+                {
+                    Content = emoji,
+                    Width = 30,
+                    Height = 30,
+                    FontSize = 16,
+                    Margin = new Thickness(2),
+                    Background = Brushes.Transparent,
+                    BorderThickness = new Thickness(0),
+                    Cursor = Cursors.Hand
+                };
+                
+                button.Click += (s, e) => {
+                    InsertEmoji(emoji);
+                    emojiPopup.IsOpen = false;
+                };
+                
+                button.MouseEnter += (s, e) => {
+                    button.Background = new SolidColorBrush(Color.FromArgb(30, 0, 0, 0));
+                };
+                
+                button.MouseLeave += (s, e) => {
+                    button.Background = Brushes.Transparent;
+                };
+                
+                emojiPanel.Children.Add(button);
+            }
+        }
+
+        private void BtnEmoji_Click(object sender, RoutedEventArgs e)
+        {
+            if (txtMessage.IsEnabled)
+            {
+                emojiPopup.IsOpen = !emojiPopup.IsOpen;
+            }
+        }
+
+        private void InsertEmoji(string emoji)
+        {
+            if (txtMessage.IsEnabled)
+            {
+                int caretIndex = txtMessage.CaretIndex;
+                txtMessage.Text = txtMessage.Text.Insert(caretIndex, emoji);
+                txtMessage.CaretIndex = caretIndex + emoji.Length;
+                txtMessage.Focus();
+            }
         }
 
         protected override async void OnClosed(EventArgs e)

@@ -128,13 +128,17 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <TextBox Grid.Column="0" Name="txtMessage" 
                          VerticalAlignment="Center" Margin="0,0,10,0"
                          KeyDown="TxtMessage_KeyDown" IsEnabled="False"
                          FontSize="12" Padding="5"/>
-                <Button Grid.Column="1" Name="btnSend" Content="Gửi" 
+                <Button Grid.Column="1" Name="btnEmoji" Content="😊" 
+                        Width="40" Margin="0,0,10,0" Click="BtnEmoji_Click" IsEnabled="False"
+                        FontSize="16" Padding="2" ToolTip="Chọn biểu cảm"/>
+                <Button Grid.Column="2" Name="btnSend" Content="Gửi" 
                         Width="80" Click="BtnSend_Click" IsEnabled="False"
                         FontSize="12" Padding="5"/>
             </Grid>
@@ -149,5 +153,29 @@
                 <TextBlock Name="lblTime" Text=""/>
             </StatusBarItem>
         </StatusBar>
+
+        <!-- Popup chọn biểu cảm -->
+        <Popup Name="emojiPopup" Placement="Top" PlacementTarget="{Binding ElementName=btnEmoji}" 
+               IsOpen="False" StaysOpen="False" AllowsTransparency="True">
+            <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1" 
+                    CornerRadius="5" Padding="10" Margin="0,5,0,0">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.3" ShadowDepth="2" BlurRadius="5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Chọn biểu cảm:" FontWeight="Bold" 
+                               Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                    
+                    <WrapPanel Grid.Row="1" Name="emojiPanel" Width="200" Height="120">
+                        <!-- Các biểu cảm sẽ được thêm bằng code -->
+                    </WrapPanel>
+                </Grid>
+            </Border>
+        </Popup>
     </Grid>
 </Window>
