@@ -155,17 +155,31 @@ namespace Message_Client
                 var fileInfoMessage = $"FILE_UPLOAD_START|{username}|{fileName}|{fileSize}";
                 var fileInfoBytes = Encoding.UTF8.GetBytes(fileInfoMessage);
                 
+                // Khai báo buffer cho phản hồi
+                var responseBuffer = new byte[1024];
+                
                 // Gửi thông tin file trực tiếp
                 await _stream.WriteAsync(fileInfoBytes, 0, fileInfoBytes.Length);
 
-                // Đọc phản hồi từ server
-                var responseBuffer = new byte[1024];
-                var responseBytesRead = await _stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
-                var response = Encoding.UTF8.GetString(responseBuffer, 0, responseBytesRead);
-
-                if (!response.Contains("FILE_UPLOAD_READY"))
+                // Đọc phản hồi từ server với timeout
+                using var readyTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                try
                 {
-                    UploadError?.Invoke("Server không sẵn sàng nhận file");
+                    var responseBytesRead = await _stream.ReadAsync(responseBuffer, 0, responseBuffer.Length, readyTimeout.Token);
+                    var response = Encoding.UTF8.GetString(responseBuffer, 0, responseBytesRead).Trim();
+
+                    // Debug: Log phản hồi từ server
+                    UploadStatusChanged?.Invoke($"Server phản hồi ready: '{response}'");
+
+                    if (!response.Contains("FILE_UPLOAD_READY"))
+                    {
+                        UploadError?.Invoke($"Server không sẵn sàng nhận file: '{response}'");
+                        return false;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    UploadError?.Invoke("Timeout khi đọc phản hồi từ server");
                     return false;
                 }
 
@@ -196,19 +210,31 @@ namespace Message_Client
                 var endBytes = Encoding.UTF8.GetBytes(endMessage);
                 await _stream.WriteAsync(endBytes, 0, endBytes.Length);
 
-                // Đọc phản hồi cuối cùng
-                var finalResponseBytesRead = await _stream.ReadAsync(responseBuffer, 0, responseBuffer.Length);
-                var finalResponse = Encoding.UTF8.GetString(responseBuffer, 0, finalResponseBytesRead);
+                // Đọc phản hồi cuối cùng với timeout
+                using var responseTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                try
+                {
+                    var finalResponseBytesRead = await _stream.ReadAsync(responseBuffer, 0, responseBuffer.Length, responseTimeout.Token);
+                    var finalResponse = Encoding.UTF8.GetString(responseBuffer, 0, finalResponseBytesRead).Trim();
 
-                if (finalResponse.Contains("FILE_UPLOAD_SUCCESS"))
-                {
-                    UploadCompleted?.Invoke($"Upload thành công: {fileName}");
-                    UploadStatusChanged?.Invoke($"Upload hoàn thành: {fileName}");
-                    return true;
+                    // Debug: Log phản hồi từ server
+                    UploadStatusChanged?.Invoke($"Server phản hồi: '{finalResponse}'");
+
+                    if (finalResponse.Contains("FILE_UPLOAD_SUCCESS"))
+                    {
+                        UploadCompleted?.Invoke($"Upload thành công: {fileName}");
+                        UploadStatusChanged?.Invoke($"Upload hoàn thành: {fileName}");
+                        return true;
+                    }
+                    else
+                    {
+                        UploadError?.Invoke($"Server phản hồi không đúng: '{finalResponse}'");
+                        return false;
+                    }
                 }
-                else
+                catch (OperationCanceledException)
                 {
-                    UploadError?.Invoke($"Server phản hồi không đúng: {finalResponse}");
+                    UploadError?.Invoke("Timeout khi đọc phản hồi từ server");
                     return false;
                 }
             }
