@@ -223,6 +223,11 @@ namespace Message_Client
             }
         }
 
+        public NetworkStream? GetStream()
+        {
+            return _stream;
+        }
+
         public void Dispose()
         {
             Task.Run(async () => await DisconnectAsync());

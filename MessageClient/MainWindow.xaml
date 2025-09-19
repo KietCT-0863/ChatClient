@@ -14,6 +14,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Tiêu đề -->
@@ -122,8 +123,60 @@
             </Grid>
         </GroupBox>
 
+        <!-- Upload file -->
+        <GroupBox Grid.Row="3" Header="Upload File" Margin="0,0,0,10">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Chọn file -->
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBox Grid.Column="0" Name="txtFilePath" 
+                             VerticalAlignment="Center" Margin="0,0,10,0"
+                             IsEnabled="False" FontSize="12" Padding="5"
+                             ToolTip="Đường dẫn file sẽ được upload"/>
+                    <Button Grid.Column="1" Name="btnBrowseFile" Content="Chọn file" 
+                            Width="80" Margin="0,0,10,0" Click="BtnBrowseFile_Click" IsEnabled="False"
+                            FontSize="12" Padding="5"/>
+                    <Button Grid.Column="2" Name="btnUploadFile" Content="Upload" 
+                            Width="80" Click="BtnUploadFile_Click" IsEnabled="False"
+                            FontSize="12" Padding="5"/>
+                </Grid>
+                
+                <!-- Progress bar -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <ProgressBar Grid.Column="0" Name="progressUpload" 
+                                 Height="20" Margin="0,0,10,0"
+                                 Minimum="0" Maximum="100" Value="0"
+                                 Visibility="Collapsed"/>
+                    <TextBlock Grid.Column="1" Name="lblUploadProgress" 
+                               VerticalAlignment="Center" FontSize="11"
+                               Text="0%" Visibility="Collapsed"/>
+                </Grid>
+                
+                <!-- Status upload -->
+                <TextBlock Grid.Row="2" Name="lblUploadStatus" 
+                           FontSize="11" Foreground="Gray"
+                           Text="Chưa chọn file"/>
+            </Grid>
+        </GroupBox>
+
         <!-- Gửi tin nhắn -->
-        <GroupBox Grid.Row="3" Header="Gửi tin nhắn" Margin="0,0,0,10">
+        <GroupBox Grid.Row="4" Header="Gửi tin nhắn" Margin="0,0,0,10">
             <Grid Margin="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -145,7 +198,7 @@
         </GroupBox>
 
         <!-- Status bar -->
-        <StatusBar Grid.Row="4">
+        <StatusBar Grid.Row="5">
             <StatusBarItem>
                 <TextBlock Name="lblStatus" Text="Sẵn sàng kết nối"/>
             </StatusBarItem>

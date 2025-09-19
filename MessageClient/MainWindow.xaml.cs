@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Win32;
 
 namespace Message_Client
 {
@@ -15,9 +16,11 @@ namespace Message_Client
     public partial class MainWindow : Window
     {
         private TcpClientManager? _tcpClient;
+        private FileUploadManager? _fileUploadManager;
         private readonly ObservableCollection<MessageItem> _messages;
         private readonly DispatcherTimer _timeTimer;
         private string _username = "User";
+        private string _selectedFilePath = "";
 
         public MainWindow()
         {
@@ -105,6 +108,7 @@ namespace Message_Client
                     txtMessage.IsEnabled = true;
                     btnSend.IsEnabled = true;
                     btnEmoji.IsEnabled = true;
+                    btnBrowseFile.IsEnabled = true;
                     
                     // Disable connection settings
                     txtServerAddress.IsEnabled = false;
@@ -288,6 +292,8 @@ namespace Message_Client
             txtMessage.IsEnabled = false;
             btnSend.IsEnabled = false;
             btnEmoji.IsEnabled = false;
+            btnBrowseFile.IsEnabled = false;
+            btnUploadFile.IsEnabled = false;
             
             // Enable connection settings
             txtServerAddress.IsEnabled = true;
@@ -468,6 +474,155 @@ namespace Message_Client
             }
         }
 
+        private void BtnBrowseFile_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Title = "Chọn file để upload",
+                Filter = "Tất cả files (*.*)|*.*|Text files (*.txt)|*.txt|Image files (*.jpg;*.png;*.gif)|*.jpg;*.png;*.gif|Document files (*.pdf;*.doc;*.docx)|*.pdf;*.doc;*.docx",
+                FilterIndex = 1
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                _selectedFilePath = openFileDialog.FileName;
+                txtFilePath.Text = _selectedFilePath;
+                
+                var fileInfo = new System.IO.FileInfo(_selectedFilePath);
+                lblUploadStatus.Text = $"Đã chọn: {fileInfo.Name} ({FormatFileSize(fileInfo.Length)})";
+                btnUploadFile.IsEnabled = true;
+            }
+        }
+
+        private async void BtnUploadFile_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_selectedFilePath))
+            {
+                MessageBox.Show("Vui lòng chọn file để upload", "Thông báo", 
+                              MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                // Tạo FileUploadManager mới cho mỗi lần upload
+                _fileUploadManager = new FileUploadManager();
+                
+                // Đăng ký các event
+                _fileUploadManager.UploadProgressChanged += OnUploadProgressChanged;
+                _fileUploadManager.UploadStatusChanged += OnUploadStatusChanged;
+                _fileUploadManager.UploadCompleted += OnUploadCompleted;
+                _fileUploadManager.UploadError += OnUploadError;
+
+                // Kết nối tới server (sử dụng cùng địa chỉ và port với chat)
+                if (!int.TryParse(txtServerPort.Text, out int port))
+                {
+                    MessageBox.Show("Port không hợp lệ", "Lỗi", 
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                bool connected = await _fileUploadManager.ConnectAsync(txtServerAddress.Text.Trim(), port);
+                
+                if (connected)
+                {
+                    // Disable các nút trong khi upload
+                    btnBrowseFile.IsEnabled = false;
+                    btnUploadFile.IsEnabled = false;
+                    
+                    // Hiển thị progress bar
+                    progressUpload.Visibility = Visibility.Visible;
+                    lblUploadProgress.Visibility = Visibility.Visible;
+                    
+                    // Bắt đầu upload file
+                    await _fileUploadManager.UploadFileAsync(_selectedFilePath, _username);
+                }
+                else
+                {
+                    MessageBox.Show("Không thể kết nối tới server để upload file", "Lỗi", 
+                                  MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi upload file: {ex.Message}", "Lỗi", 
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OnUploadProgressChanged(int progress)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                progressUpload.Value = progress;
+                lblUploadProgress.Text = $"{progress}%";
+            });
+        }
+
+        private void OnUploadStatusChanged(string status)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                lblUploadStatus.Text = status;
+            });
+        }
+
+        private void OnUploadCompleted(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                // Reset UI
+                progressUpload.Visibility = Visibility.Collapsed;
+                lblUploadProgress.Visibility = Visibility.Collapsed;
+                btnBrowseFile.IsEnabled = true;
+                btnUploadFile.IsEnabled = false;
+                
+                // Clear file selection
+                _selectedFilePath = "";
+                txtFilePath.Text = "";
+                lblUploadStatus.Text = "Upload hoàn thành";
+                
+                // Hiển thị thông báo thành công
+                AddMessage(message, "System", MessageType.System);
+                
+                MessageBox.Show(message, "Thành công", 
+                              MessageBoxButton.OK, MessageBoxImage.Information);
+            });
+        }
+
+        private void OnUploadError(string error)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                // Reset UI
+                progressUpload.Visibility = Visibility.Collapsed;
+                lblUploadProgress.Visibility = Visibility.Collapsed;
+                btnBrowseFile.IsEnabled = true;
+                btnUploadFile.IsEnabled = !string.IsNullOrEmpty(_selectedFilePath);
+                
+                lblUploadStatus.Text = $"Lỗi: {error}";
+                
+                // Hiển thị thông báo lỗi
+                AddMessage($"Lỗi upload: {error}", "System", MessageType.Error);
+                
+                MessageBox.Show(error, "Lỗi", 
+                              MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+        }
+
+        private string FormatFileSize(long bytes)
+        {
+            string[] suffixes = { "B", "KB", "MB", "GB" };
+            int counter = 0;
+            decimal number = bytes;
+            while (Math.Round(number / 1024) >= 1)
+            {
+                number /= 1024;
+                counter++;
+            }
+            return $"{number:n1} {suffixes[counter]}";
+        }
+
         protected override async void OnClosed(EventArgs e)
         {
             _timeTimer.Stop();
@@ -480,6 +635,8 @@ namespace Message_Client
                 }
                 _tcpClient.Dispose();
             }
+            
+            _fileUploadManager?.Dispose();
             
             base.OnClosed(e);
         }
